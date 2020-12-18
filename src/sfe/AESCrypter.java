@@ -28,14 +28,18 @@ public class AESCrypter implements Crypter {
 	}
 	
 	public AESCrypter(int mode, byte[] password) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException {
+		this(mode, password, false);
+	}
+	
+	public AESCrypter(int mode, byte[] password, boolean hashed) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException {
 		this.mode = mode;
 		
-		MessageDigest sha = MessageDigest.getInstance("SHA-256");
+		MessageDigest sha = hashed ? null : MessageDigest.getInstance("SHA-256");
 		//---> Encrypt
 		
 		if(isModeActive(MODE_ENCRYPT))
 			encryptCipher = initCipher(
-					Cipher.getInstance("AES"), Cipher.ENCRYPT_MODE, sha.digest(password)
+					Cipher.getInstance("AES"), Cipher.ENCRYPT_MODE, hashed ? password : sha.digest(password)
 			);
 		else
 			encryptCipher = null;
@@ -44,7 +48,7 @@ public class AESCrypter implements Crypter {
 		
 		if(isModeActive(MODE_DECRYPT))
 			decryptCipher = initCipher(
-					Cipher.getInstance("AES"), Cipher.DECRYPT_MODE, sha.digest(password)
+					Cipher.getInstance("AES"), Cipher.DECRYPT_MODE, hashed ? password : sha.digest(password)
 			);
 		else
 			decryptCipher = null;
