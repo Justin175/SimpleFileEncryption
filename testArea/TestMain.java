@@ -14,8 +14,9 @@ public class TestMain {
 	
 	public static void main(String[] args) throws Exception {
 		if(!IS_TESTING) {
-			SimpleFileEncryption.main(new String[] {"encrypt", "-f", "test/Test_Password.txt", "test/Test.txt", "test/t_en.encrypted"});
-			SimpleFileEncryption.main(new String[] {"decrypt", "-f", "test/Test_Password.txt", "test/t_en.encrypted", "test/t_de.txt"});
+			SimpleFileEncryption.main(new String[] {});
+//			SimpleFileEncryption.main(new String[] {"encrypt", "-f", "test/Test_Password.txt", "test/Test.txt", "test/t_en.encrypted"});
+//			SimpleFileEncryption.main(new String[] {"decrypt", "-f", "test/Test_Password.txt", "test/t_en.encrypted", "test/t_de.txt"});
 			return;
 		}
 		

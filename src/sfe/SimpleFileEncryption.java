@@ -39,7 +39,7 @@ public class SimpleFileEncryption {
 				System.err.println("An error has occurred.");
 				System.err.println("------------------------------------------------------------------------------------------");
 				System.err.println("Command: ");
-				System.err.println(" > " + cmd.getCommandName());
+				System.err.println(" > " + cmd.getCommandName() + (cmd.hasAlias() ? " (" + cmd.getAlias() + ")" : ""));
 				System.err.println(" >     " + cmd.getUsage());
 				System.err.println("Given Command:");
 				System.err.println(" > " + Arrays.toString(args));
@@ -61,8 +61,11 @@ public class SimpleFileEncryption {
 	
 	private static void loadCommands() {
 		addCommand(new ConsoleCommand("help", (x) -> { printCommands(); return true; }, ""));
-		addCommand(new ConsoleCommand("encrypt", SimpleFileEncryption::encrypt, "[password-flag] [File/Folder]"));
-		addCommand(new ConsoleCommand("decrypt", SimpleFileEncryption::decrypt, "[password-flag] [File/Folder]"));
+		addCommand(new ConsoleCommand("encrypt", "ec", SimpleFileEncryption::encrypt, "[password-flag] [File/Folder]"));
+		addCommand(new ConsoleCommand("decrypt", "dc", SimpleFileEncryption::decrypt, "[password-flag] [File/Folder]"));
+		
+		//TODO
+		addCommand(new ConsoleCommand("createPasswordFile", "cpf", SimpleFileEncryption::createPasswordFile, "[create-password-flag] [File/Folder]"));
 	}
 	
 	private static void addCommand(ConsoleCommand cmd) {
@@ -72,7 +75,7 @@ public class SimpleFileEncryption {
 	private static void printCommands() {
 		System.out.println("SFE-Commands:");
 		for(ConsoleCommand a : COMMANDS.values()) //Print commands
-			System.out.println("  " + a.getCommandName() + " " + a.getUsage());
+			System.out.println("  " + a.getCommandName() + " " + a.getUsage() + (a.hasAlias() ? "\n    Alias: " + a.getAlias() : ""));
 		
 		System.out.println();
 		
@@ -80,6 +83,10 @@ public class SimpleFileEncryption {
 		System.out.println("  -p [password]     (Password as Plain-Text.)");
 		System.out.println("  -f [file]         (Password in a File and not hashed.)");
 		System.out.println("  -h [file]         (Password in a File and it is hashed.)");
+	}
+	
+	private static final boolean createPasswordFile(String[] args) {
+		return true;
 	}
 	
 	private static final boolean encrypt(String[] args) {
