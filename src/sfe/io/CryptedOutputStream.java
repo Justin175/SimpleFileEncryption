@@ -48,6 +48,14 @@ public class CryptedOutputStream extends OutputStream {
 	
 	@Override
 	public void flush() throws IOException {
+		//end mulitipart...
+		try {
+			byte[] buffer = crypter.endMultipartEncryption();
+			os.write(buffer);
+		} catch (ShortBufferException | IllegalBlockSizeException | BadPaddingException e) {
+			e.printStackTrace();
+		}
+		
 		os.flush();
 	}
 }

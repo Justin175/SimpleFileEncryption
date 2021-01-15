@@ -33,6 +33,11 @@ public class CryptedInputStream extends InputStream {
 	}
 	
 	@Override
+	public void close() throws IOException {
+		is.close();
+	}
+	
+	@Override
 	public int read() throws IOException {
 		if(hasError)
 			return -1;
