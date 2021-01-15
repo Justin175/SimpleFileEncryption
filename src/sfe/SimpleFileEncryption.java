@@ -1,5 +1,6 @@
 package sfe;
 
+import java.awt.Desktop;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -69,8 +70,6 @@ public class SimpleFileEncryption {
 		addCommand(new ConsoleCommand("help", (x) -> { printCommands(); return true; }, ""));
 		addCommand(new ConsoleCommand("encrypt", "ec", SimpleFileEncryption::encrypt, "[password-flag] [File/Folder]"));
 		addCommand(new ConsoleCommand("decrypt", "dc", SimpleFileEncryption::decrypt, "[password-flag] [File/Folder]"));
-		
-		//TODO
 		addCommand(new ConsoleCommand("createPasswordFile", "cpf", SimpleFileEncryption::createPasswordFile, "[<create-password-flag>...] [File/Folder]"));
 	}
 	
@@ -104,6 +103,7 @@ public class SimpleFileEncryption {
 		System.out.println("  -p                (Plain-Flag: Password as Plain Text <Alphapbet=[a-zA-Z0-9!.+-?]>)");
 		System.out.println("  -s                (Salt Password <Number of Bytes: 6>)");
 		System.out.println("  -sl [Length]      (Salt Password with a specific number of Bytes)");
+		System.out.println("  -o                (Open the file after Creation)");
 	}
 	
 	private static final boolean createPasswordFile(String[] args) {
@@ -114,6 +114,7 @@ public class SimpleFileEncryption {
 		boolean hashing = false;
 		boolean plain = false;
 		boolean salt = false;
+		boolean open = false;
 		int saltLength = 6;
 		
 		if(args.length < 3) {
@@ -129,7 +130,8 @@ public class SimpleFileEncryption {
 				(x) -> { return x.equalsIgnoreCase("-h"); },
 				(x) -> { return x.equalsIgnoreCase("-p"); },
 				(x) -> { return x.equalsIgnoreCase("-s"); },
-				(x) -> { return x.equalsIgnoreCase("-sl"); }
+				(x) -> { return x.equalsIgnoreCase("-sl"); },
+				(x) -> { return x.equalsIgnoreCase("-o"); }
 		).
 		setFlagProcess(
 				/*-l  */ (flag, arguments, index, flagsData) -> { flagsData.put("password_length", arguments[index + 1]); },
@@ -137,7 +139,8 @@ public class SimpleFileEncryption {
 				/*-h  */ (flag, arguments, index, flagsData) -> { flagsData.put("hashing", true); },
 				/*-p  */ (flag, arguments, index, flagsData) -> { flagsData.put("plain", true); },
 				/*-s  */ (flag, arguments, index, flagsData) -> { flagsData.put("salt", true); flagsData.put("salt_length", "6"); },
-				/*-sl */ (flag, arguments, index, flagsData) -> { flagsData.put("salt", true); flagsData.put("salt_length", arguments[index + 1]); }
+				/*-sl */ (flag, arguments, index, flagsData) -> { flagsData.put("salt", true); flagsData.put("salt_length", arguments[index + 1]); },
+				/*-o  */ (flag, arguments, index, flagsData) -> { flagsData.put("open", true); }
 		);
 		
 		//process Arguments
@@ -187,6 +190,9 @@ public class SimpleFileEncryption {
 		
 		if(fp.containsFlagData("plain"))
 			plain = (boolean) fp.getFlagsData().get("plain");
+		
+		if(fp.containsFlagData("open"))
+			plain = (boolean) fp.getFlagsData().get("open");
 		
 		if(fp.containsFlagData("salt")) {
 			salt = (boolean) fp.getFlagsData().get("salt");
@@ -295,6 +301,14 @@ public class SimpleFileEncryption {
 		
 		time = System.currentTimeMillis() - time;
 		System.out.println("Password-File created in " + (time < 1000 ? time + " ms" : (time / 1000) + " s") + ".");
+		
+		if(open) {
+			try {
+				Desktop.getDesktop().open(out);
+			} catch (IOException e) {
+				System.err.println("Unable to open file.");
+			}
+		}
 		
 		return true;
 	}
