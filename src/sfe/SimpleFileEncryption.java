@@ -24,17 +24,10 @@ import sfe.utils.TextUtils;
 public class SimpleFileEncryption {
 
 	private static final HashMap<String, ConsoleCommand> COMMANDS = new HashMap<>();
+	private static final HashMap<String, ConsoleCommand> COMMANDS_PRINT = new HashMap<>();
 	private static String[] errorString;
 	
 	public static void main(String[] args) {
-		if(args.length == 0) {
-			try {
-				ClassLoader.getSystemClassLoader().loadClass("TestMain").getMethod("main", String[].class).invoke(null, new Object[] {new String[0]});
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-			return;
-		}
 		loadCommands();
 		
 		if(args.length == 0) {
@@ -82,6 +75,7 @@ public class SimpleFileEncryption {
 	}
 	
 	private static void addCommand(ConsoleCommand cmd) {
+		COMMANDS_PRINT.put(cmd.getCommandName().toLowerCase(), cmd);
 		COMMANDS.put(cmd.getCommandName().toLowerCase(), cmd);
 		
 		if(cmd.hasAlias())
@@ -90,7 +84,7 @@ public class SimpleFileEncryption {
 	
 	private static void printCommands() {
 		System.out.println("SFE-Commands:");
-		for(ConsoleCommand a : COMMANDS.values()) //Print commands
+		for(ConsoleCommand a : COMMANDS_PRINT.values()) //Print commands
 			System.out.println("  " + a.getCommandName() + " " + a.getUsage() + (a.hasAlias() ? "\n    Alias: " + a.getAlias() : ""));
 		
 		System.out.println();
@@ -115,6 +109,7 @@ public class SimpleFileEncryption {
 	private static final boolean createPasswordFile(String[] args) {
 		int length = -1;
 		byte[] givenPassword = null;
+		long time = System.currentTimeMillis();
 		
 		boolean hashing = false;
 		boolean plain = false;
@@ -266,7 +261,40 @@ public class SimpleFileEncryption {
 			}
 			
 			givenPassword = sha.digest(givenPassword);
+			Arrays.copyOf(givenPassword, 128);
 		}
+		
+		//create file
+		String filestr = args[args.length - 1];
+		File out = new File(filestr);
+		
+		if(out.exists() && out.isFile()) {
+			//generate new name
+			int nameAdd = 0;
+			String name = out.getName();
+			int firstPoint = name.indexOf('.');
+			String ending = name.substring(firstPoint + 1);
+			name = name.substring(0, firstPoint);
+			
+			while(out.exists()) {
+				out = new File(out.getAbsoluteFile().getParentFile().getPath() + "/" + name + nameAdd + "." + ending);
+				nameAdd += 1;
+			}
+			
+			System.out.println("File allready exists. The name was automaticly changed to: '" + out.getName() + "'");
+		}
+		
+		try {
+			FileOutputStream os = new FileOutputStream(out);
+			os.write(givenPassword);
+			os.close();
+		} catch (IOException e) {
+			setErrorString("Unable to write a file in following path.", "Path: " + out.getName());
+			return false;
+		}
+		
+		time = System.currentTimeMillis() - time;
+		System.out.println("Password-File created in " + (time < 1000 ? time + " ms" : (time / 1000) + " s") + ".");
 		
 		return true;
 	}
