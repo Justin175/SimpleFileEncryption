@@ -19,6 +19,7 @@ import javax.crypto.NoSuchPaddingException;
 import sfe.command.ConsoleCommand;
 import sfe.io.CryptedInputStream;
 import sfe.io.CryptedOutputStream;
+import sfe.utils.FileNameGenerator;
 import sfe.utils.FlagProcessor;
 import sfe.utils.TextUtils;
 
@@ -276,17 +277,7 @@ public class SimpleFileEncryption {
 		
 		if(out.exists() && out.isFile()) {
 			//generate new name
-			int nameAdd = 0;
-			String name = out.getName();
-			int firstPoint = name.indexOf('.');
-			String ending = name.substring(firstPoint + 1);
-			name = name.substring(0, firstPoint);
-			
-			while(out.exists()) {
-				out = new File(out.getAbsoluteFile().getParentFile().getPath() + "/" + name + nameAdd + "." + ending);
-				nameAdd += 1;
-			}
-			
+			out = FileNameGenerator.generateValidFile(out);
 			System.out.println("File allready exists. The name was automaticly changed to: '" + out.getName() + "'");
 		}
 		
@@ -355,32 +346,37 @@ public class SimpleFileEncryption {
 		}
 		else {
 			//generate next Name
-			int nameAdd = 0;
-			String name = toEncrypt.getName();
-			int firstPoint = name.indexOf('.');
-			String ending = name.substring(firstPoint + 1);
-			name = name.substring(0, firstPoint);
-			
-			while(toWriteIn.exists()) {
-				toWriteIn = new File(toWriteIn.getAbsoluteFile().getParentFile().getPath() + "/" + name + nameAdd + "." + ending + ".crypted");
-				nameAdd += 1;
-			}
+			toWriteIn = FileNameGenerator.generateValidFile(toWriteIn + (toWriteIn.getName().endsWith(".encrypted") ? "" : ".encrypted"));
 		}
 
 		//Create AES-Crypter
 		try {
+			System.out.println("Setup encryption.");
+			long startTime = System.currentTimeMillis();
+			long lastTime = startTime;
+			
 			AESCrypter crypter = new AESCrypter(Crypter.MODE_ENCRYPT, password, isHashed);
 			CryptedOutputStream os = new CryptedOutputStream(new FileOutputStream(toWriteIn), crypter);
 			FileInputStream is = new FileInputStream(toEncrypt);
 			
+			System.out.print("Encrypting...");
 			int last = is.read();
 			while(last != -1) {
 				os.write(last);
 				last = is.read();
+				
+				if(System.currentTimeMillis() - lastTime > 1000) {
+					System.out.print(".");
+					lastTime = System.currentTimeMillis();
+				}
 			}
 			
 			os.close();
 			is.close();
+			
+			lastTime = System.currentTimeMillis() - startTime;
+			System.out.println();
+			System.out.println("Encryption ends. Time needed: " + (lastTime < 1000 ? lastTime + " ms." : (lastTime / 1000) + " s."));
 		} catch (InvalidKeyException | NoSuchAlgorithmException | NoSuchPaddingException | IOException e) {
 			setErrorString(e.getMessage());
 			return false;
@@ -440,33 +436,37 @@ public class SimpleFileEncryption {
 		}
 		else {
 			//generate next Name
-			int nameAdd = 0;
-			String name = toDecrypt.getName();
-			int firstPoint = name.indexOf('.');
-			String ending = name.substring(firstPoint + 1);
-			name = name.substring(0, firstPoint);
-			
-			while(toWriteIn.exists()) {
-				toWriteIn = new File(toWriteIn.getAbsoluteFile().getParentFile().getPath() + "/" + name + nameAdd + "." + ending + ".crypted");
-				nameAdd += 1;
-			}
+			toWriteIn = FileNameGenerator.generateValidFile(toWriteIn);
 		}
-		
 		
 		//Create AES-Crypter
 		try {
+			System.out.println("Setup decryption.");
+			long startTime = System.currentTimeMillis();
+			long lastTime = startTime;
+			
 			AESCrypter crypter = new AESCrypter(Crypter.MODE_DECRYPT, password, isHashed);
 			CryptedInputStream is = new CryptedInputStream(new FileInputStream(toDecrypt), crypter);
 			FileOutputStream os = new FileOutputStream(toWriteIn);
 			
+			System.out.print("Decrypting...");
 			int last = is.read();
 			while(last != -1) {
 				os.write(last);
 				last = is.read();
+				
+				if(System.currentTimeMillis() - lastTime > 1000) {
+					System.out.print(".");
+					lastTime = System.currentTimeMillis();
+				}
 			}
 			
 			os.close();
 			is.close();
+			
+			lastTime = System.currentTimeMillis() - startTime;
+			System.out.println();
+			System.out.println("Decryption ends. Time needed: " + (lastTime < 1000 ? lastTime + " ms." : (lastTime / 1000) + " s."));
 		} catch (InvalidKeyException | NoSuchAlgorithmException | NoSuchPaddingException | IOException e) {
 			setErrorString(e.getMessage());
 			return false;
