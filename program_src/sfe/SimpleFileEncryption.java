@@ -17,8 +17,8 @@ import java.util.Random;
 import javax.crypto.NoSuchPaddingException;
 
 import sfe.command.ConsoleCommand;
+import sfe.commands.CommandEncrypt;
 import sfe.io.CryptedInputStream;
-import sfe.io.CryptedOutputStream;
 import sfe.utils.FileNameGenerator;
 import sfe.utils.FlagProcessor;
 import sfe.utils.TextUtils;
@@ -29,7 +29,7 @@ public class SimpleFileEncryption {
 	private static final HashMap<String, ConsoleCommand> COMMANDS_PRINT = new HashMap<>();
 	private static String[] errorString;
 	
-	public static void main(String[] args) {
+	public static void main(String... args) {
 		loadCommands();
 		
 		if(args.length == 0) {
@@ -69,7 +69,7 @@ public class SimpleFileEncryption {
 	
 	private static void loadCommands() {
 		addCommand(new ConsoleCommand("help", (x) -> { printCommands(); return true; }, ""));
-		addCommand(new ConsoleCommand("encrypt", "ec", SimpleFileEncryption::encrypt, "[password-flag] [File/Folder]"));
+		addCommand(new CommandEncrypt());
 		addCommand(new ConsoleCommand("decrypt", "dc", SimpleFileEncryption::decrypt, "[password-flag] [File/Folder]"));
 		addCommand(new ConsoleCommand("createPasswordFile", "cpf", SimpleFileEncryption::createPasswordFile, "[<create-password-flag>...] [File/Folder]"));
 	}
@@ -304,87 +304,6 @@ public class SimpleFileEncryption {
 		return true;
 	}
 	
-	private static final boolean encrypt(String[] args) {
-		if(args.length < 3) {
-			setErrorString("Wrong number of Arguments!", "Expected: > 2, Given: " + args.length);
-			return false;
-		}
-		
-		//Check if first argument is a flag
-		FlagType type;
-		if((type = readFlag(args[0])) == FlagType.ERROR) {
-			setErrorString("The first Argument '" + args[0] + "' is not a Password-Flag.");
-			return false;
-		}
-		
-		//read password
-		byte[] password = readPassword(type, args[1]);
-		boolean isHashed = type == FlagType.FILE_HASHED;
-		if(password == null) {
-			return false;
-		}
-		
-		//Check file to encrypt
-		File toEncrypt = new File(args[2]);
-		
-		if(!toEncrypt.exists()) {
-			setErrorString("Encryption-File '" + toEncrypt.getAbsolutePath() + "' not found.");
-			return false;
-		}
-		
-		if(!toEncrypt.isFile()) {
-			setErrorString("Encryption-File-Path '" + toEncrypt.getAbsolutePath() + "' is not linking to a File.", "Expected Type: File, Given: Directory");
-			return false;
-		}
-		
-		//Check dataFile
-		File toWriteIn = new File(args.length >= 4 ? args[3] : toEncrypt.getAbsolutePath() + ".crypted");
-		
-		if(toWriteIn.exists() && args.length >= 4) {
-			setErrorString("Goal-File '" + toWriteIn.getAbsolutePath() + "' is already existing.", "Use a other File-Name");
-			return false;
-		}
-		else {
-			//generate next Name
-			toWriteIn = FileNameGenerator.generateValidFile(toWriteIn + (toWriteIn.getName().endsWith(".encrypted") ? "" : ".encrypted"));
-		}
-
-		//Create AES-Crypter
-		try {
-			System.out.println("Setup encryption.");
-			long startTime = System.currentTimeMillis();
-			long lastTime = startTime;
-			
-			AESCrypter crypter = new AESCrypter(Crypter.MODE_ENCRYPT, password, isHashed);
-			CryptedOutputStream os = new CryptedOutputStream(new FileOutputStream(toWriteIn), crypter);
-			FileInputStream is = new FileInputStream(toEncrypt);
-			
-			System.out.print("Encrypting...");
-			int last = is.read();
-			while(last != -1) {
-				os.write(last);
-				last = is.read();
-				
-				if(System.currentTimeMillis() - lastTime > 1000) {
-					System.out.print(".");
-					lastTime = System.currentTimeMillis();
-				}
-			}
-			
-			os.close();
-			is.close();
-			
-			lastTime = System.currentTimeMillis() - startTime;
-			System.out.println();
-			System.out.println("Encryption ends. Time needed: " + (lastTime < 1000 ? lastTime + " ms." : (lastTime / 1000) + " s."));
-		} catch (InvalidKeyException | NoSuchAlgorithmException | NoSuchPaddingException | IOException e) {
-			setErrorString(e.getMessage());
-			return false;
-		}
-		
-		return true;
-	}
-	
 	private static final boolean decrypt(String[] args) {
 		if(args.length < 3) {
 			setErrorString("Wrong number of Arguments!", "Expected: > 2, Given: " + args.length);
@@ -524,5 +443,30 @@ public class SimpleFileEncryption {
 			return FlagType.FILE_HASHED;
 		else
 			return FlagType.ERROR;
+	}
+	
+	public static void printCommandInfo(ConsoleCommand cmd, String[] allowedFlags, String[] flagsDescription) {
+		printCommandInfo(cmd.getCommandName(), cmd.getAlias(), cmd.getUsage(), allowedFlags, flagsDescription);
+	}
+	
+	public static void printCommandInfo(String cmdName, String alias, String usage, String[] allowedFlags, String[] flagsDescription) {
+		int maxLength = 0;
+		
+		for(String a : allowedFlags)
+			if(a.length() > maxLength)
+				maxLength = a.length();
+		
+		printCommandInfo(cmdName, alias, usage, allowedFlags, maxLength, flagsDescription);
+	}
+	
+	public static void printCommandInfo(String cmdName, String alias, String usage, String[] allowedFlags, int maxFlagsLength, String[] flagsDescription) {
+		System.out.println("Help for '" + cmdName  + "'");
+		System.out.println("Name:   " + cmdName);
+		System.out.println("Alias:  " + alias);
+		System.out.println("Usage:  " + usage);
+		System.out.println("Allowed Flags:");
+		for(int i = 0; i < allowedFlags.length; i++) {
+			System.out.printf("  %-" + (maxFlagsLength + 3) + "s: %s\n", allowedFlags[i], flagsDescription[i]);
+		}
 	}
 }
