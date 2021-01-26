@@ -193,13 +193,11 @@ public class CommandEncrypt extends ConsoleCommand {
 					encrypt(output, () -> {
 						boolean first = true;
 						for(File a : files) {
-							if(zos != null) {
-								if(!first)
-									zos.closeEntry();
+							if(!first)
+								zos.closeEntry();
 								
-								zos.putNextEntry(new ZipEntry(a.getPath()));
-								first = false;
-							}
+							zos.putNextEntry(new ZipEntry(a.getPath()));
+							first = false;
 							
 							readAndWrite(os, a);
 						}
