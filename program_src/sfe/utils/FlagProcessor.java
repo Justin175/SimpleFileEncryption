@@ -15,6 +15,10 @@ public class FlagProcessor {
 		this.flagsData = new HashMap<>();
 	}
 	
+	public Object getData(String key) {
+		return flagsData.get(key);
+	}
+	
 	public QuatConsumer<String, String[], Integer, HashMap<String, Object>>[] getFlagsProcess() {
 		return flagsProcess;
 	}
