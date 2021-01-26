@@ -17,6 +17,7 @@ import java.util.Random;
 import javax.crypto.NoSuchPaddingException;
 
 import sfe.command.ConsoleCommand;
+import sfe.commands.CommandDecrypt;
 import sfe.commands.CommandEncrypt;
 import sfe.io.CryptedInputStream;
 import sfe.utils.FileNameGenerator;
@@ -70,7 +71,8 @@ public class SimpleFileEncryption {
 	private static void loadCommands() {
 		addCommand(new ConsoleCommand("help", (x) -> { printCommands(); return true; }, ""));
 		addCommand(new CommandEncrypt());
-		addCommand(new ConsoleCommand("decrypt", "dc", SimpleFileEncryption::decrypt, "[password-flag] [File/Folder]"));
+		addCommand(new CommandDecrypt());
+//		addCommand(new ConsoleCommand("decrypt", "dc", SimpleFileEncryption::decrypt, "[password-flag] [File/Folder]"));
 		addCommand(new ConsoleCommand("createPasswordFile", "cpf", SimpleFileEncryption::createPasswordFile, "[<create-password-flag>...] [File/Folder]"));
 	}
 	
