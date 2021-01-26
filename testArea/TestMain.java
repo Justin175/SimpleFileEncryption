@@ -13,7 +13,7 @@ public class TestMain {
 //			return;
 //		}
 		
-		SimpleFileEncryption.main("encrypt", "-z", "-d", "-o", "test/out/encrypted*.zip", "-f", "test/test_pw_autogen.key", "test/");
+		SimpleFileEncryption.main("encrypt", "-d", "-o", "test/out2/", "-f", "test/test_pw_autogen.key", "test/");
 	
 	}
 }
