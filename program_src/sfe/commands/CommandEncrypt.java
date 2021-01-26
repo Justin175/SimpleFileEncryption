@@ -3,6 +3,7 @@ package sfe.commands;
 import static sfe.SimpleFileEncryption.printCommandInfo;
 import static sfe.SimpleFileEncryption.setErrorString;
 
+import java.awt.Desktop;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -38,7 +39,8 @@ public class CommandEncrypt extends ConsoleCommand {
 			"-h",
 			"-d",
 			"-r",
-			"-z"
+			"-z",
+			"-s"
 	};
 	
 	public static final String[] FLAGS_DESCRYPTION = {
@@ -49,7 +51,8 @@ public class CommandEncrypt extends ConsoleCommand {
 			"Password is hashed",
 			"Path is a directory",
 			"Recursive-Mode (process main directories and sub-directories",
-			"Ouput files as zip"
+			"Ouput files as zip",
+			"Opens the parent directory of the output-file"
 	};
 
 	public CommandEncrypt() {
@@ -96,6 +99,7 @@ public class CommandEncrypt extends ConsoleCommand {
 		boolean isDirectory = false;
 		boolean isRecursive = false;
 		boolean isZipOutput = false;
+		boolean isOpenAfterEncryption = false;
 		File output;
 		
 		if(fp.containsFlagData("hashed"))
@@ -109,6 +113,9 @@ public class CommandEncrypt extends ConsoleCommand {
 		
 		if(fp.containsFlagData("zip"))
 			isZipOutput = true;
+		
+		if(fp.containsFlagData("show_after_processing"))
+			isOpenAfterEncryption = true;
 		
 		//check target-file
 		if(isDirectory && !toEncrypt.isDirectory()) {
@@ -162,7 +169,6 @@ public class CommandEncrypt extends ConsoleCommand {
 				
 				while(output.exists() && (isDirectory ? output.isDirectory() : output.isFile()))
 					output = new File(firstHalf + (currentNumber++) + end);
-				
 			}
 		}
 		
@@ -245,6 +251,15 @@ public class CommandEncrypt extends ConsoleCommand {
 		} catch (InvalidKeyException | NoSuchAlgorithmException | NoSuchPaddingException e) {
 			setErrorString("An error corrupted while encrypting.", "Java-Error-Message: " + e.getMessage());
 			return false;
+		}
+		
+		if(isOpenAfterEncryption) {
+			try {
+				Desktop.getDesktop().open(output.getAbsoluteFile().getParentFile());
+			} catch (IOException e) {
+				System.err.println("Unable to open the output-file directory.");
+				System.err.println("Error-Message: " + e.getMessage());
+			}
 		}
 		
 		return true;
@@ -341,7 +356,8 @@ public class CommandEncrypt extends ConsoleCommand {
 				"-h"::equalsIgnoreCase,
 				"-d"::equalsIgnoreCase,
 				"-r"::equalsIgnoreCase,
-				"-z"::equalsIgnoreCase
+				"-z"::equalsIgnoreCase,
+				"-s"::equalsIgnoreCase
 		);
 		fp.setFlagProcess(
 				/*-p  */ (flag, arguments, index, flagsData) -> { flagsData.put("password_text", true); flagsData.put("password", arguments.length > (index + 1) ? arguments[index + 1] : null); },
@@ -350,7 +366,8 @@ public class CommandEncrypt extends ConsoleCommand {
 				/*-h  */ (flag, arguments, index, flagsData) -> { flagsData.put("hashed", true); },
 				/*-d  */ (flag, arguments, index, flagsData) -> { flagsData.put("directory", true); },
 				/*-r  */ (flag, arguments, index, flagsData) -> { flagsData.put("recursive", true); },
-				/*-z  */ (flag, arguments, index, flagsData) -> { flagsData.put("zip", true); }
+				/*-z  */ (flag, arguments, index, flagsData) -> { flagsData.put("zip", true); },
+				/*-s  */ (flag, arguments, index, flagsData) -> { flagsData.put("show_after_processing", true); }
 		);
 		
 		return fp;
