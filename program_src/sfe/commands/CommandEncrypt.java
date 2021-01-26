@@ -202,8 +202,23 @@ public class CommandEncrypt extends ConsoleCommand {
 					os.close();
 				}
 				else {
-					OutputStream os = new CryptedOutputStream(new FileOutputStream(output), crypter);
-					/*TODO*/
+					String outputPath = output.getAbsolutePath() + "/";
+					int encryptionLength = toEncrypt.getAbsoluteFile().getAbsolutePath().length() + 1;
+					
+					encrypt(output, () -> {
+						String out;
+						File outFile = new File(outputPath);
+						outFile.mkdirs();
+						
+						for(File a : files) {
+							out = a.getAbsolutePath().substring(encryptionLength);
+							outFile = new File(outputPath + out);
+							
+							CryptedOutputStream os = new CryptedOutputStream(new FileOutputStream(outFile), crypter);
+							readAndWrite(os, a);
+							os.close();
+						}
+					});
 				}
 				
 				//Start enrypting files
