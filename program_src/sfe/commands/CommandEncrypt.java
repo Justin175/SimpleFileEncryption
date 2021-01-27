@@ -140,13 +140,13 @@ public class CommandEncrypt extends ConsoleCommand {
 				int currentNumber = 0;
 				output = new File(name.replace("*", "")); 
 				
-				while(output.exists() && (isDirectory ? output.isDirectory() : output.isFile()))
+				while(output.exists() && ((isDirectory && !isZipOutput) ? output.isDirectory() : output.isFile()))
 					output = new File(name.replace("*", "" + (currentNumber++)));
 			}
 			else
 				output = new File(name);
 			
-			if(output.exists() && (isDirectory ? output.isDirectory() : output.isFile())) {
+			if(output.exists() && ((isDirectory && !isZipOutput) ? output.isDirectory() : output.isFile())) {
 				setErrorString(
 						"The choosen Output-Name already existing in this directory.",
 						"Given: " + name,
@@ -161,7 +161,7 @@ public class CommandEncrypt extends ConsoleCommand {
 			String name = toEncrypt.getName() + (isZipOutput ? ".zip" : ".en");
 			output = new File(name);
 			
-			if(output.exists() && (isDirectory ? output.isDirectory() : output.isFile())) {
+			if(output.exists() && ((isDirectory && !isZipOutput) ? output.isDirectory() : output.isFile())) {
 				int i = toEncrypt.getName().indexOf('.');
 				String firstHalf = i != -1 ? toEncrypt.getName().substring(0, i) : toEncrypt.getName();
 				int currentNumber = 0;
@@ -189,14 +189,18 @@ public class CommandEncrypt extends ConsoleCommand {
 				if(isZipOutput) {
 					ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(output));
 					OutputStream os = new CryptedOutputStream(zos, crypter);
+					final int encryptionLength = toEncrypt.getAbsoluteFile().getAbsolutePath().length() + 1;
 					
 					encrypt(output, () -> {
 						boolean first = true;
+						String out;
+						
 						for(File a : files) {
 							if(!first)
 								zos.closeEntry();
 								
-							zos.putNextEntry(new ZipEntry(a.getPath()));
+							out = a.getAbsolutePath().substring(encryptionLength);
+							zos.putNextEntry(new ZipEntry(out));
 							first = false;
 							
 							readAndWrite(os, a);

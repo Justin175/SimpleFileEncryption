@@ -73,7 +73,7 @@ public class CommandDecrypt extends ConsoleCommand {
 			return false;
 		}
 		
-		//check to encryt file for existence
+		//check to decryt file for existence
 		File toEncrypt = new File(args[args.length - 1]);
 		if(!toEncrypt.exists()) {
 			setErrorString("The target-file/directory for decryption not exists.", "Given: " + args[args.length - 1]);
@@ -146,7 +146,7 @@ public class CommandDecrypt extends ConsoleCommand {
 			else
 				output = new File(name);
 			
-			if(output.exists() && (isDirectory ? output.isDirectory() : output.isFile())) {
+			if(output.exists() && ((isDirectory && !isZipOutput) ? output.isDirectory() : output.isFile())) {
 				setErrorString(
 						"The choosen Output-Name already existing in this directory.",
 						"Given: " + name,
@@ -161,13 +161,13 @@ public class CommandDecrypt extends ConsoleCommand {
 			String name = toEncrypt.getName() + (isZipOutput ? ".zip" : ".en");
 			output = new File(name);
 			
-			if(output.exists() && (isDirectory ? output.isDirectory() : output.isFile())) {
+			if(output.exists() && ((isDirectory && !isZipOutput) ? output.isDirectory() : output.isFile())) {
 				int i = toEncrypt.getName().indexOf('.');
 				String firstHalf = i != -1 ? toEncrypt.getName().substring(0, i) : toEncrypt.getName();
 				int currentNumber = 0;
 				String end = (i != -1 ? toEncrypt.getName().substring(i) : "") + (isZipOutput ? ".zip" : ".en");
 				
-				while(output.exists() && (isDirectory ? output.isDirectory() : output.isFile()))
+				while(output.exists() && ((isDirectory && !isZipOutput) ? output.isDirectory() : output.isFile()))
 					output = new File(firstHalf + (currentNumber++) + end);
 			}
 		}
