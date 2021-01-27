@@ -85,12 +85,7 @@ public class SimpleFileEncryption {
 			System.out.println("  " + a.getCommandName() + " " + a.getUsage() + (a.hasAlias() ? "\n    Alias: " + a.getAlias() : ""));
 		
 		System.out.println();
-		
-		System.out.println("SFE-Password-Flags");
-		System.out.println("  -p [password]     (Password as Plain-Text.)");
-		System.out.println("  -f [file]         (Password in a File and not hashed.)");
-		System.out.println("  -h [file]         (Password in a File and it is hashed.)");
-		
+		System.out.println("Use: '[Command] --help' for detailed Informations.");
 		System.out.println();
 		
 		System.out.println("CPF-Flags");
