@@ -16,17 +16,13 @@ public class CryptedOutputStream extends OutputStream {
 	protected final Crypter crypter;
 	private byte[] toEncryptBuffer = new byte[1];
 	
-	public CryptedOutputStream(OutputStream os, Crypter crypter){
-		this(os, crypter, crypter.getMode());
-	}
-	
-	public CryptedOutputStream(OutputStream os, Crypter crypter, int mode) {
-		if(!crypter.isModeActive(mode))
-			throw new ModeNotActiveExcetption("Encryption-Mode and Decryption-Mode are not active!");
+	public CryptedOutputStream(OutputStream os, Crypter crypter) {
+		if(!crypter.isModeActive(Crypter.MODE_ENCRYPT))
+			throw new ModeNotActiveExcetption("Encryption-Mode is not active!");
+
+		if(os == null || crypter == null)
+			throw new NullPointerException((os == null ? "OutputStream" : "Crypter") + " is null.");
 		
-		if((mode & Crypter.MODE_EN_DE_CRYPT) == Crypter.MODE_EN_DE_CRYPT)
-			throw new ModeNotActiveExcetption("Encryption-Mode and Decryption-Mode are not allowed to be used at the same time.");
-	
 		this.os = os;
 		this.crypter = crypter;
 	}
