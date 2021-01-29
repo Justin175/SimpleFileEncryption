@@ -51,7 +51,7 @@ public class CommandEncrypt extends ConsoleCommand {
 			"Password is hashed",
 			"Path is a directory",
 			"Recursive-Mode (process main directories and sub-directories",
-			"Ouput files as zip",
+			"<currently not supported> Ouput files as zip",
 			"Opens the parent directory of the output-file"
 	};
 
@@ -111,8 +111,11 @@ public class CommandEncrypt extends ConsoleCommand {
 		if(fp.containsFlagData("recursive"))
 			isRecursive = true;
 		
-		if(fp.containsFlagData("zip"))
+		if(fp.containsFlagData("zip")) {
 			isZipOutput = true;
+			setErrorString("Flag -z is not supported.");
+			return false;
+		}
 		
 		if(fp.containsFlagData("show_after_processing"))
 			isOpenAfterEncryption = true;
@@ -184,34 +187,15 @@ public class CommandEncrypt extends ConsoleCommand {
 			if(isDirectory) {
 				List<File> files = new LinkedList<>();
 				System.out.println("Loading Files...");
-				getFiles(toEncrypt, files, isRecursive);;
+				getFiles(toEncrypt, files, isRecursive);
+				
+				int encryptionLength = toEncrypt.getAbsoluteFile().getAbsolutePath().length() + 1;
 				
 				if(isZipOutput) {
-					ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(output));
-					OutputStream os = new CryptedOutputStream(zos, crypter);
-					final int encryptionLength = toEncrypt.getAbsoluteFile().getAbsolutePath().length() + 1;
-					
-					encrypt(output, () -> {
-						boolean first = true;
-						String out;
-						
-						for(File a : files) {
-							if(!first)
-								zos.closeEntry();
-								
-							out = a.getAbsolutePath().substring(encryptionLength);
-							zos.putNextEntry(new ZipEntry(out));
-							first = false;
-							
-							readAndWrite(os, a);
-						}
-					});
-					
-					os.close();
+					//not supportet yet
 				}
 				else {
 					String outputPath = output.getAbsolutePath() + "/";
-					int encryptionLength = toEncrypt.getAbsoluteFile().getAbsolutePath().length() + 1;
 					
 					encrypt(output, () -> {
 						String out;

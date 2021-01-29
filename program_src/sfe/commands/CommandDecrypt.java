@@ -16,6 +16,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
 import javax.crypto.NoSuchPaddingException;
@@ -24,6 +25,7 @@ import sfe.AESCrypter;
 import sfe.Crypter;
 import sfe.command.ConsoleCommand;
 import sfe.io.CryptedInputStream;
+import sfe.io.CryptedOutputStream;
 import sfe.utils.CryptingRunnable;
 import sfe.utils.FlagProcessor;
 
@@ -40,6 +42,7 @@ public class CommandDecrypt extends ConsoleCommand {
 			"-d",
 			"-r",
 			"-z",
+			"-zc",
 			"-s"
 	};
 	
@@ -51,7 +54,8 @@ public class CommandDecrypt extends ConsoleCommand {
 			"Password is hashed",
 			"Path is a directory",
 			"Recursive-Mode (process main directories and sub-directories",
-			"Ouput files as zip",
+			"<currently not supported> Ouput files as zip",
+			"<currently not supported> Process the content in the Zip <Using this flag will automaticly include the -z flag.>",
 			"Opens the parent directory of the output-file"
 	};
 
@@ -100,6 +104,7 @@ public class CommandDecrypt extends ConsoleCommand {
 		boolean isRecursive = false;
 		boolean isZipOutput = false;
 		boolean isOpenAfterEncryption = false;
+		boolean isZipContent = false;
 		File output;
 		
 		if(fp.containsFlagData("hashed"))
@@ -111,15 +116,26 @@ public class CommandDecrypt extends ConsoleCommand {
 		if(fp.containsFlagData("recursive"))
 			isRecursive = true;
 		
-		if(fp.containsFlagData("zip"))
+		if(fp.containsFlagData("zip")) {
 			isZipOutput = true;
+			setErrorString("Flag -z and -zc are not supported.");
+			return false;
+		}
 		
 		if(fp.containsFlagData("show_after_processing"))
 			isOpenAfterEncryption = true;
 		
+		if(fp.containsFlagData("zip_input"))
+			isZipContent = true;
+		
 		//check target-file
 		if(isDirectory && !toEncrypt.isDirectory()) {
 			setErrorString("Given Path is not a directory.", "Given: " + args[args.length - 1]);
+			return false;
+		}
+		
+		if(isZipContent && isDirectory) {
+			setErrorString("The Flags -zc and -d can not be used together.");
 			return false;
 		}
 		
@@ -232,20 +248,48 @@ public class CommandDecrypt extends ConsoleCommand {
 			}
 			else {
 				OutputStream os;
+				final ZipOutputStream zos;
+				final boolean isZipContent_ = isZipContent;
 				
-				if(isZipOutput) {
+				if(isZipOutput && !isZipContent) {
 					os = new ZipOutputStream(new FileOutputStream(output));
-					((ZipOutputStream) os).putNextEntry(new ZipEntry(toEncrypt.getName()));
+					zos = null;
+				}
+				else if(isZipContent) {
+					os = new CryptedOutputStream(zos = new ZipOutputStream(new FileOutputStream(output)), crypter);
 				}
 				else {
 					os = new FileOutputStream(output);
+					zos = null;
 				}
 				
 				decrypt(output, () -> {
-					try(CryptedInputStream is = new CryptedInputStream(new FileInputStream(toEncrypt), crypter)) {
+					if(isZipContent_) {
+						ZipInputStream zis = new ZipInputStream(new FileInputStream(toEncrypt));
+						
+						ZipEntry current = zis.getNextEntry();
+						int r;
+						
+						while(current != null) {
+							zos.putNextEntry(current);
+							r = zis.read();
+							
+							while(r != -1) {
+								os.write(r);
+								r = zis.read();
+							}
+
+							((CryptedOutputStream) os).flush();
+							current = zis.getNextEntry();
+						}
+						
+						zis.close();
+					}
+					else try(CryptedInputStream is = new CryptedInputStream(new FileInputStream(toEncrypt), crypter)) {
 						readAndWrite(os, is);
 					}
 				});
+				
 				os.close();
 			}
 		} catch (IOException e) {
@@ -355,6 +399,7 @@ public class CommandDecrypt extends ConsoleCommand {
 				"-d"::equalsIgnoreCase,
 				"-r"::equalsIgnoreCase,
 				"-z"::equalsIgnoreCase,
+				"-zc"::equalsIgnoreCase,
 				"-s"::equalsIgnoreCase
 		);
 		fp.setFlagProcess(
@@ -365,6 +410,7 @@ public class CommandDecrypt extends ConsoleCommand {
 				/*-d  */ (flag, arguments, index, flagsData) -> { flagsData.put("directory", true); },
 				/*-r  */ (flag, arguments, index, flagsData) -> { flagsData.put("recursive", true); },
 				/*-z  */ (flag, arguments, index, flagsData) -> { flagsData.put("zip", true); },
+				/*-zc  */ (flag, arguments, index, flagsData) -> { flagsData.put("zip_input", true); flagsData.put("zip", true); },
 				/*-s  */ (flag, arguments, index, flagsData) -> { flagsData.put("show_after_processing", true); }
 		);
 		
