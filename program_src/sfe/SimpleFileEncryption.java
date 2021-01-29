@@ -27,7 +27,10 @@ public class SimpleFileEncryption {
 	
 	public static void main(String... args) {
 		loadCommands();
-		
+		run(args);
+	}
+	
+	public static void run(String... args) {
 		if(args.length == 0) {
 			printCommands();
 		}
