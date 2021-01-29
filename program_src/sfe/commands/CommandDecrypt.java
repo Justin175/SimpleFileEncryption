@@ -54,8 +54,8 @@ public class CommandDecrypt extends ConsoleCommand {
 			"Password is hashed",
 			"Path is a directory",
 			"Recursive-Mode (process main directories and sub-directories",
-			"<currently not supported> Ouput files as zip",
-			"<currently not supported> Process the content in the Zip <Using this flag will automaticly include the -z flag.>",
+			"Ouput files as zip",
+			"Decrypts the content of a Zip-File <Flag -z is automaticly included>",
 			"Opens the parent directory of the output-file"
 	};
 
@@ -78,8 +78,8 @@ public class CommandDecrypt extends ConsoleCommand {
 		}
 		
 		//check to decryt file for existence
-		File toEncrypt = new File(args[args.length - 1]);
-		if(!toEncrypt.exists()) {
+		File toDecrypt = new File(args[args.length - 1]);
+		if(!toDecrypt.exists()) {
 			setErrorString("The target-file/directory for decryption not exists.", "Given: " + args[args.length - 1]);
 			return false;
 		}
@@ -104,7 +104,7 @@ public class CommandDecrypt extends ConsoleCommand {
 		boolean isRecursive = false;
 		boolean isZipOutput = false;
 		boolean isOpenAfterEncryption = false;
-		boolean isZipContent = false;
+		boolean isZipInput = false;
 		File output;
 		
 		if(fp.containsFlagData("hashed"))
@@ -116,25 +116,22 @@ public class CommandDecrypt extends ConsoleCommand {
 		if(fp.containsFlagData("recursive"))
 			isRecursive = true;
 		
-		if(fp.containsFlagData("zip")) {
+		if(fp.containsFlagData("zip"))
 			isZipOutput = true;
-			setErrorString("Flag -z and -zc are not supported.");
-			return false;
-		}
 		
 		if(fp.containsFlagData("show_after_processing"))
 			isOpenAfterEncryption = true;
 		
 		if(fp.containsFlagData("zip_input"))
-			isZipContent = true;
+			isZipInput = true;
 		
 		//check target-file
-		if(isDirectory && !toEncrypt.isDirectory()) {
+		if(isDirectory && !toDecrypt.isDirectory()) {
 			setErrorString("Given Path is not a directory.", "Given: " + args[args.length - 1]);
 			return false;
 		}
 		
-		if(isZipContent && isDirectory) {
+		if(isZipInput && isDirectory) {
 			setErrorString("The Flags -zc and -d can not be used together.");
 			return false;
 		}
@@ -174,14 +171,14 @@ public class CommandDecrypt extends ConsoleCommand {
 			}
 		}
 		else { //generate output-file
-			String name = toEncrypt.getName() + (isZipOutput ? ".zip" : ".en");
+			String name = toDecrypt.getName() + (isZipOutput ? ".zip" : ".en");
 			output = new File(name);
 			
 			if(output.exists() && ((isDirectory && !isZipOutput) ? output.isDirectory() : output.isFile())) {
-				int i = toEncrypt.getName().indexOf('.');
-				String firstHalf = i != -1 ? toEncrypt.getName().substring(0, i) : toEncrypt.getName();
+				int i = toDecrypt.getName().indexOf('.');
+				String firstHalf = i != -1 ? toDecrypt.getName().substring(0, i) : toDecrypt.getName();
 				int currentNumber = 0;
-				String end = (i != -1 ? toEncrypt.getName().substring(i) : "") + (isZipOutput ? ".zip" : ".en");
+				String end = (i != -1 ? toDecrypt.getName().substring(i) : "") + (isZipOutput ? ".zip" : ".en");
 				
 				while(output.exists() && ((isDirectory && !isZipOutput) ? output.isDirectory() : output.isFile()))
 					output = new File(firstHalf + (currentNumber++) + end);
@@ -197,101 +194,12 @@ public class CommandDecrypt extends ConsoleCommand {
 		try {
 			AESCrypter crypter = new AESCrypter(Crypter.MODE_DECRYPT, password, isHashed);
 			
-			if(isDirectory) {
-				List<File> files = new LinkedList<>();
-				System.out.println("Loading Files...");
-				getFiles(toEncrypt, files, isRecursive);;
-				
-				if(isZipOutput) {
-					ZipOutputStream os = new ZipOutputStream(new FileOutputStream(output));
-					
-					decrypt(output, () -> {
-						boolean first = true;
-						for(File a : files) {
-							if(!first)
-								os.closeEntry();
-								
-							os.putNextEntry(new ZipEntry(a.getPath()));
-							first = false;
-							
-							try(InputStream is = new CryptedInputStream(new FileInputStream(a), crypter)) {
-								readAndWrite(os, is);
-							}
-						}
-					});
-					
-					os.close();
-				}
-				else {
-					String outputPath = output.getAbsolutePath() + "/";
-					int encryptionLength = toEncrypt.getAbsoluteFile().getAbsolutePath().length() + 1;
-					
-					decrypt(output, () -> {
-						String out;
-						File outFile = new File(outputPath);
-						outFile.mkdirs();
-						
-						for(File a : files) {
-							out = a.getAbsolutePath().substring(encryptionLength);
-							outFile = new File(outputPath + out);
-							
-							FileOutputStream os = new FileOutputStream(outFile);
-							InputStream is = new CryptedInputStream(new FileInputStream(a), crypter);
-							
-							readAndWrite(os, is);
-							
-							is.close();
-							os.close();
-						}
-					});
-				}
-			}
-			else {
-				OutputStream os;
-				final ZipOutputStream zos;
-				final boolean isZipContent_ = isZipContent;
-				
-				if(isZipOutput && !isZipContent) {
-					os = new ZipOutputStream(new FileOutputStream(output));
-					zos = null;
-				}
-				else if(isZipContent) {
-					os = new CryptedOutputStream(zos = new ZipOutputStream(new FileOutputStream(output)), crypter);
-				}
-				else {
-					os = new FileOutputStream(output);
-					zos = null;
-				}
-				
-				decrypt(output, () -> {
-					if(isZipContent_) {
-						ZipInputStream zis = new ZipInputStream(new FileInputStream(toEncrypt));
-						
-						ZipEntry current = zis.getNextEntry();
-						int r;
-						
-						while(current != null) {
-							zos.putNextEntry(current);
-							r = zis.read();
-							
-							while(r != -1) {
-								os.write(r);
-								r = zis.read();
-							}
-
-							((CryptedOutputStream) os).flush();
-							current = zis.getNextEntry();
-						}
-						
-						zis.close();
-					}
-					else try(CryptedInputStream is = new CryptedInputStream(new FileInputStream(toEncrypt), crypter)) {
-						readAndWrite(os, is);
-					}
-				});
-				
-				os.close();
-			}
+			if(isDirectory)
+				decryptDirectory(crypter, toDecrypt, output, isRecursive, isZipOutput);
+			else if(isZipInput)
+				decryptZipFile(crypter, toDecrypt, output);
+			else
+				decryptFile(crypter, toDecrypt, output, isZipOutput);
 		} catch (IOException e) {
 			e.printStackTrace();
 			setErrorString("An error corrupted while writing the decrypted-file/directory.", "Java-Error-Message: " + e.getMessage());
@@ -311,6 +219,88 @@ public class CommandDecrypt extends ConsoleCommand {
 		}
 		
 		return true;
+	}
+	
+	private static void decryptZipFile(AESCrypter crypter, File toDecrypt, File output) throws IOException {
+		//start decrypt
+		decrypt(output, () -> {
+			//create is
+			ZipInputStream zis = new ZipInputStream(new FileInputStream(toDecrypt));
+			CryptedInputStream cis = new CryptedInputStream(zis, crypter);
+			
+			//create os
+			ZipOutputStream os = new ZipOutputStream(new FileOutputStream(output));
+			
+			//start decrypt
+			ZipEntry current;
+			
+			while((current = zis.getNextEntry()) != null) {
+				//Set entry
+				os.putNextEntry(new ZipEntry(current.getName()));
+				
+				//start reading
+				int b;
+				while((b = cis.read()) != -1)
+					os.write(b);
+			}
+			
+			//close streams
+			cis.close();
+			os.close();
+		});
+	}
+
+	private static void decryptFile(Crypter crypter, File toDecrypt, File output, boolean isZipOutput) throws IOException {
+		OutputStream os;
+		
+		if(isZipOutput) {
+			ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(output));
+			os = new CryptedOutputStream(zos, crypter);
+			zos.putNextEntry(new ZipEntry(toDecrypt.getName()));
+		}
+		else {
+			os = new FileOutputStream(output);
+		}
+		
+		decrypt(output, () -> readAndWrite(os, new CryptedInputStream(new FileInputStream(toDecrypt), crypter)));
+		os.close();
+	}
+	
+	private static void decryptDirectory(Crypter crypter, File toDecrypt, File output, boolean isRecursive, boolean isZipOutput) throws IOException {
+		List<File> files = new LinkedList<>();
+		System.out.println("Loading Files...");
+		getFiles(toDecrypt, files, isRecursive);
+		
+		int encryptionLength = toDecrypt.getAbsoluteFile().getAbsolutePath().length() + 1;
+		
+		if(isZipOutput) {
+			//Adding later
+		}
+		else
+			decryptDirectoryToDirectory(crypter, toDecrypt, output, files, encryptionLength);
+	}
+	
+	private static void decryptDirectoryToDirectory(Crypter crypter, File toDecrypt, File output, List<File> files, int encryptionLength) throws IOException {
+		String outputPath = output.getAbsolutePath() + "/";
+		
+		decrypt(output, () -> {
+			String out;
+			File outFile = new File(outputPath);
+			outFile.mkdirs();
+			
+			for(File a : files) {
+				out = a.getAbsolutePath().substring(encryptionLength);
+				outFile = new File(outputPath + out);
+				
+				FileOutputStream os = new FileOutputStream(outFile);
+				InputStream is = new CryptedInputStream(new FileInputStream(a), crypter);
+				
+				readAndWrite(os, is);
+				
+				is.close();
+				os.close();
+			}
+		});
 	}
 	
 	private static void getFiles(File currentDir, List<File> files, boolean recursive) {
