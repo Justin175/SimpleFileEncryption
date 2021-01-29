@@ -16,6 +16,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
 import javax.crypto.NoSuchPaddingException;
@@ -40,6 +41,7 @@ public class CommandEncrypt extends ConsoleCommand {
 			"-d",
 			"-r",
 			"-z",
+			"-zc",
 			"-s"
 	};
 	
@@ -51,7 +53,8 @@ public class CommandEncrypt extends ConsoleCommand {
 			"Password is hashed",
 			"Path is a directory",
 			"Recursive-Mode (process main directories and sub-directories",
-			"<currently not supported> Ouput files as zip",
+			"Output files as zip",
+			"Encrypts the content of a Zip-File <Flag -z is automaticly included>",
 			"Opens the parent directory of the output-file"
 	};
 
@@ -100,6 +103,7 @@ public class CommandEncrypt extends ConsoleCommand {
 		boolean isRecursive = false;
 		boolean isZipOutput = false;
 		boolean isOpenAfterEncryption = false;
+		boolean isZipInput = false;
 		File output;
 		
 		if(fp.containsFlagData("hashed"))
@@ -111,14 +115,20 @@ public class CommandEncrypt extends ConsoleCommand {
 		if(fp.containsFlagData("recursive"))
 			isRecursive = true;
 		
-		if(fp.containsFlagData("zip")) {
+		if(fp.containsFlagData("zip"))
 			isZipOutput = true;
-			setErrorString("Flag -z is not supported.");
-			return false;
-		}
 		
 		if(fp.containsFlagData("show_after_processing"))
 			isOpenAfterEncryption = true;
+		
+		if(fp.containsFlagData("zip_input"))
+			isZipInput = true;
+		
+		//check error
+		if(isDirectory && isZipInput) {
+			setErrorString("Flags -zc and -d can not be given at the same time.");
+			return false;
+		}
 		
 		//check target-file
 		if(isDirectory && !toEncrypt.isDirectory()) {
@@ -184,52 +194,13 @@ public class CommandEncrypt extends ConsoleCommand {
 		try {
 			AESCrypter crypter = new AESCrypter(Crypter.MODE_ENCRYPT, password, isHashed);
 			
-			if(isDirectory) {
-				List<File> files = new LinkedList<>();
-				System.out.println("Loading Files...");
-				getFiles(toEncrypt, files, isRecursive);
-				
-				int encryptionLength = toEncrypt.getAbsoluteFile().getAbsolutePath().length() + 1;
-				
-				if(isZipOutput) {
-					//not supportet yet
-				}
-				else {
-					String outputPath = output.getAbsolutePath() + "/";
-					
-					encrypt(output, () -> {
-						String out;
-						File outFile = new File(outputPath);
-						outFile.mkdirs();
-						
-						for(File a : files) {
-							out = a.getAbsolutePath().substring(encryptionLength);
-							outFile = new File(outputPath + out);
-							
-							CryptedOutputStream os = new CryptedOutputStream(new FileOutputStream(outFile), crypter);
-							readAndWrite(os, a);
-							os.close();
-						}
-					});
-				}
-				
-				//Start enrypting files
-			}
-			else {
-				OutputStream os;
-				
-				if(isZipOutput) {
-					ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(output));
-					os = new CryptedOutputStream(zos, crypter);
-					zos.putNextEntry(new ZipEntry(toEncrypt.getName()));
-				}
-				else {
-					os = new CryptedOutputStream(new FileOutputStream(output), crypter);
-				}
-				
-				encrypt(output, () -> readAndWrite(os, toEncrypt));
-				os.close();
-			}
+			if(isDirectory)
+				encryptDirectory(crypter, toEncrypt, output, isRecursive, isZipOutput);
+			else if(isZipInput)
+				encryptZipFile(crypter, toEncrypt, output);
+			else
+				encryptFile(crypter, toEncrypt, output, isZipOutput);
+			
 		} catch (IOException e) {
 			e.printStackTrace();
 			setErrorString("An error corrupted while writing the encrypted-file/directory.", "Java-Error-Message: " + e.getMessage());
@@ -249,6 +220,131 @@ public class CommandEncrypt extends ConsoleCommand {
 		}
 		
 		return true;
+	}
+	
+	private static void encryptZipFile(AESCrypter crypter, File toEncrypt, File output) throws IOException {
+		//start encryption
+		encrypt(output, () -> {
+			//create os
+			ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(output));
+			@SuppressWarnings("resource")
+			CryptedOutputStream cos = new CryptedOutputStream(zos, crypter); //dont needed to be closed, fos getting closed in zos
+			
+			//create is
+			ZipInputStream is = new ZipInputStream(new FileInputStream(toEncrypt));
+			
+			//load file, encrypt and write to zos
+			ZipEntry current;
+			
+			while((current = is.getNextEntry()) != null) {
+				//set entry
+				zos.putNextEntry(new ZipEntry(current.getName()));
+				
+				//write to
+				int b = is.read();
+				
+				while(b != -1) {
+					cos.write(b);
+					b = is.read();
+				}
+				
+				//finish cos
+				cos.finish();
+				
+				//close entry
+				zos.closeEntry();
+			}
+			
+			//close is
+			is.close();
+			
+			//close os
+			zos.close();
+		});
+	}
+
+	private static void encryptFile(Crypter crypter, File toEncrypt, File output, boolean isZipOutput) throws IOException {
+		OutputStream os;
+		
+		if(isZipOutput) {
+			ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(output));
+			os = new CryptedOutputStream(zos, crypter);
+			zos.putNextEntry(new ZipEntry(toEncrypt.getName()));
+		}
+		else {
+			os = new CryptedOutputStream(new FileOutputStream(output), crypter);
+		}
+		
+		encrypt(output, () -> readAndWrite(os, toEncrypt));
+		os.close();
+	}
+	
+	private static void encryptDirectory(Crypter crypter, File toEncrypt, File output, boolean isRecursive, boolean isZipOutput) throws IOException {
+		List<File> files = new LinkedList<>();
+		System.out.println("Loading Files...");
+		getFiles(toEncrypt, files, isRecursive);
+		
+		int encryptionLength = toEncrypt.getAbsoluteFile().getAbsolutePath().length() + 1;
+		
+		if(isZipOutput) //to Zip
+			encryptDirectoryToZip(crypter, toEncrypt, output, files, encryptionLength);
+		else //to a certain directory
+			encryptDirectoryToDirectory(crypter, toEncrypt, output, files, encryptionLength);
+	}
+	
+	private static void encryptDirectoryToDirectory(Crypter crypter, File toEncrypt, File output, List<File> files, int encryptionLength) throws IOException {
+		String outputPath = output.getAbsolutePath() + "/";
+		
+		encrypt(output, () -> {
+			String out;
+			File outFile = new File(outputPath);
+			outFile.mkdirs();
+			
+			for(File a : files) {
+				out = a.getAbsolutePath().substring(encryptionLength);
+				outFile = new File(outputPath + out);
+				
+				CryptedOutputStream os = new CryptedOutputStream(new FileOutputStream(outFile), crypter);
+				readAndWrite(os, a);
+				os.close();
+			}
+		});
+	}
+	
+	private static void encryptDirectoryToZip(Crypter crypter, File toEncrypt, File output, List<File> files, int encryptionLength) throws IOException {
+		ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(output));
+		@SuppressWarnings("resource")
+		CryptedOutputStream cos = new CryptedOutputStream(zos, crypter); //never gets closed, the fos will be closed later from zos
+		
+		//start encrypting files
+		encrypt(output, () -> {
+			for(File a : files) {
+				//Set current entry
+				zos.putNextEntry(new ZipEntry(a.getAbsolutePath().substring(encryptionLength)));
+				
+				//load file
+				FileInputStream is = new FileInputStream(a);
+				
+				//Start encrypting and write it to the zos
+				int b = is.read();
+				
+				while(b != -1) {
+					cos.write(b);
+					b = is.read();
+				}
+				
+				//close is
+				is.close();
+				
+				//finish cos
+				cos.finish();
+				
+				//close entry
+				zos.closeEntry();
+			}
+		});
+		
+		zos.close();
 	}
 	
 	private static void getFiles(File currentDir, List<File> files, boolean recursive) {
@@ -343,6 +439,7 @@ public class CommandEncrypt extends ConsoleCommand {
 				"-d"::equalsIgnoreCase,
 				"-r"::equalsIgnoreCase,
 				"-z"::equalsIgnoreCase,
+				"-zc"::equalsIgnoreCase,
 				"-s"::equalsIgnoreCase
 		);
 		fp.setFlagProcess(
@@ -353,6 +450,7 @@ public class CommandEncrypt extends ConsoleCommand {
 				/*-d  */ (flag, arguments, index, flagsData) -> { flagsData.put("directory", true); },
 				/*-r  */ (flag, arguments, index, flagsData) -> { flagsData.put("recursive", true); },
 				/*-z  */ (flag, arguments, index, flagsData) -> { flagsData.put("zip", true); },
+				/*-zc */ (flag, arguments, index, flagsData) -> { flagsData.put("zip", true); flagsData.put("zip_input", true); },
 				/*-s  */ (flag, arguments, index, flagsData) -> { flagsData.put("show_after_processing", true); }
 		);
 		
