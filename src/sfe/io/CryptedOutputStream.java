@@ -42,10 +42,13 @@ public class CryptedOutputStream extends OutputStream {
 	public void close() throws IOException {
 		try {
 			byte[] buffer = crypter.endMultipartEncryption();
-			os.write(buffer);
+
+			if(buffer != null && buffer.length != 0)
+				os.write(buffer);
 		} catch (ShortBufferException | IllegalBlockSizeException | BadPaddingException e) {
 			e.printStackTrace();
 		}
+		
 		os.close();
 	}
 	
@@ -54,11 +57,24 @@ public class CryptedOutputStream extends OutputStream {
 		//end mulitipart...
 		try {
 			byte[] buffer = crypter.endMultipartEncryption();
-			os.write(buffer);
+			
+			if(buffer != null && buffer.length != 0)
+				os.write(buffer);
 		} catch (ShortBufferException | IllegalBlockSizeException | BadPaddingException e) {
 			e.printStackTrace();
 		}
 		
 		os.flush();
+	}
+	
+	public void finish() throws IOException {
+		try {
+			byte[] buffer = crypter.endMultipartEncryption();
+			
+			if(buffer != null && buffer.length != 0)
+				os.write(buffer);
+		} catch (ShortBufferException | IllegalBlockSizeException | BadPaddingException e) {
+			e.printStackTrace();
+		}
 	}
 }
