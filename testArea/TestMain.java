@@ -13,7 +13,8 @@ public class TestMain {
 //			return;
 //		}
 		
-//		SimpleFileEncryption.main("encrypt", "-d", "-o", "test/out2/", "-f", "test/test_pw_autogen.key", "test/");
-		SimpleFileEncryption.main("decrypt", "-d", "-o", "test/out*/", "-f", "test/test_pw_autogen.key", "test/out2");
+//		SimpleFileEncryption.main("encrypt", "-d", "-z", "-o", "test/out/encrypted/out*.zip", "-f", "test/test_pw_autogen.key", "test/in/");
+//		SimpleFileEncryption.main("encrypt", "-d", "-o", "test/out/encrypted/out*/", "-f", "test/test_pw_autogen.key", "test/in/");
+		SimpleFileEncryption.main("decrypt", "-d", "-o", "test/out/decrypted/out*", "-f", "test/test_pw_autogen.key", "test/out/encrypted/out/");
 	}
 }
