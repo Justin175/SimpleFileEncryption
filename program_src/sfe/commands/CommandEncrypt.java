@@ -65,7 +65,7 @@ public class CommandEncrypt extends ConsoleCommand {
 	}
 	
 	private static boolean process(String[] args) {
-		//--help-Flag is processed lonly
+		//--help-Flag is processed lonely
 		if(args[0].equalsIgnoreCase("--help")) {
 			printCommandInfo(commandEncrypt, ALLOWED_FLAGS, FLAGS_DESCRYPTION);
 			return true;
