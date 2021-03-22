@@ -27,7 +27,7 @@ public class SimpleFileEncryption {
 	
 	public static void main(String... args) {
 		loadCommands();
-		run(args);
+		run(args.length == 0 ? new String[] { "help" } : args);
 	}
 	
 	public static void run(String... args) {
