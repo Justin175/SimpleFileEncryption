@@ -59,7 +59,7 @@ public class CommandEncrypt extends ConsoleCommand {
 	};
 
 	public CommandEncrypt() {
-		super("encrypt", "en", CommandEncrypt::process, "encrypt  [<flags>...] [path]");
+		super("encrypt", "en", CommandEncrypt::process, "[<flags>...] [path]");
 		
 		commandEncrypt = this;
 	}

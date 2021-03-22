@@ -65,7 +65,7 @@ public class CommandDecrypt extends ConsoleCommand {
 	};
 
 	public CommandDecrypt() {
-		super("decrypt", "de", CommandDecrypt::process, "decrypt  [<flags>...] [path]");
+		super("decrypt", "de", CommandDecrypt::process, "[<flags>...] [path]");
 		
 		commandEncrypt = this;
 	}
