@@ -1,5 +1,4 @@
-import java.io.File;
-import java.net.URL;
+import sfe.SimpleFileEncryption;
 
 public class TestMain {
 	
@@ -21,7 +20,9 @@ public class TestMain {
 //		SimpleFileEncryption.main("encrypt", "-zc", "-o", "test/out/encrypted/out_zc*.zip", "-f", "test/test_pw_autogen.key", "test/in/toEncrypt.zip");
 //		SimpleFileEncryption.main("decrypt", "-zc", "-o", "test/out/decrypted/out_zc*.zip", "-f", "test/test_pw_autogen.key", "test/out/encrypted/out_zc.zip");
 	
-		File f = new File(new URL("https://drive.google.com/uc?export=download&id=1iYBNp78vWMVhVxMcQzeFFNSHd6YsgurN").toURI());
-		System.out.println(f.exists());
+//		File f = new File(new URL("https://drive.google.com/uc?export=download&id=1iYBNp78vWMVhVxMcQzeFFNSHd6YsgurN").toURI());
+//		System.out.println(f.exists());
+		
+		SimpleFileEncryption.main("cpf", "-l", "256", "-p", "test/test_pw_autogen2.key");
 	}
 }
