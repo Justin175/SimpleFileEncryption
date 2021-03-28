@@ -57,9 +57,9 @@ public class SimpleFileEncryption {
 	
 	private static void loadCommands() {
 		addCommand(new ConsoleCommand("help", (x) -> { printCommands(); return true; }, ""));
+		
 		addCommand(new CommandEncrypt());
 		addCommand(new CommandDecrypt());
-//		addCommand(new ConsoleCommand("decrypt", "dc", SimpleFileEncryption::decrypt, "[password-flag] [File/Folder]"));
 		addCommand(new CommandCreatePasswordFile());
 	}
 	
@@ -101,6 +101,7 @@ public class SimpleFileEncryption {
 		System.out.println("Alias:  " + (alias == null ? "-" : alias));
 		System.out.println("Usage:  " + usage);
 		System.out.println("Allowed Flags:");
+		
 		for(int i = 0; i < allowedFlags.length; i++) {
 			System.out.printf("  %-" + (maxFlagsLength + 3) + "s: %s\n", allowedFlags[i], flagsDescription[i]);
 		}
